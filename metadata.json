@@ -1,0 +1,6 @@
+{
+  "name": "IdeaMeow 灵感喵",
+  "description": "Local-first AI script aggregation workspace for short-video creators featuring an infinite canvas and rich text editor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

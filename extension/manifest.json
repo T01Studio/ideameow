@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "IdeaMeow 灵感喵 Harvester",
+  "version": "1.1.0",
+  "description": "Harvest snippets from AI chats directly into your IdeaMeow infinite canvas. Supports ChatGPT, Kimi, Doubao, DeepSeek, Gemini, Claude + custom URLs.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://www.kimi.com/*",
+    "https://kimi.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*",
+    "https://www.doubao.com/*",
+    "https://doubao.com/*",
+    "https://chat.deepseek.com/*",
+    "https://node1.chatshare.biz/*",
+    "https://*.run.app/*",
+    "http://localhost/*",
+    "https://*.github.io/*",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://www.kimi.com/*",
+        "https://kimi.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*",
+        "https://www.doubao.com/*",
+        "https://doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://node1.chatshare.biz/*"
+      ],
+      "js": ["harvester.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://*.run.app/*",
+        "http://localhost/*",
+        "https://*.github.io/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "IdeaMeow 灵感喵 - 设置",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
+  }
+}
