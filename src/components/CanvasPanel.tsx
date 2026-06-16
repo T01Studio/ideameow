@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { PlusCircle, Layers, HelpCircle } from 'lucide-react';
+import { PlusCircle, Layers, HelpCircle, Hand, Maximize2 } from 'lucide-react';
 import { useStore } from '../store';
 import SnippetNode from './SnippetNode';
 
@@ -22,6 +22,9 @@ export default function CanvasPanel() {
     isExtensionConnected,
   } = useStore();
 
+  // Tool mode: 'pan' = default 抓手拖动, 'resize' = 自由缩放便签
+  const [toolMode, setToolMode] = useState<'pan' | 'resize'>('pan');
+
   // Load initial database list upon page load
   useEffect(() => {
     loadSnippets();
@@ -29,14 +32,17 @@ export default function CanvasPanel() {
 
   // Convert schema snippets list directly to React Flow interactive nodes
   const flowNodes = useMemo(() => {
+    const isResize = toolMode === 'resize';
     return snippets.map((snippet) => ({
       id: snippet.id,
       type: 'snippetNode',
       position: snippet.position || { x: 100, y: 100 },
-      data: { snippet },
-      dragHandle: '.sf-drag-handle', // 仅头部的抓手图标可拖拽，内容区可自由选文
+      data: { snippet, resizeMode: isResize },
+      style: { width: 300, height: 160 },
+      // 仅在抓手模式下启用拖拽；缩放模式下禁用 dragHandle
+      dragHandle: isResize ? undefined : '.sf-drag-handle',
     }));
-  }, [snippets]);
+  }, [snippets, toolMode]);
 
   // Capture position update at node dragging end and persist to Dexie database
   const handleNodeDragStop = useCallback(
@@ -99,6 +105,33 @@ export default function CanvasPanel() {
             <h3 className="font-sans font-bold text-sm text-slate-100">
               无线灵感素材画布
             </h3>
+          </div>
+          {/* Tool mode switcher */}
+          <div className="flex items-center bg-slate-800 rounded-full p-0.5 border border-slate-700/60">
+            <button
+              onClick={() => setToolMode('pan')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                toolMode === 'pan'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="抓手模式：拖拽移动便签，滚轮缩放画布"
+            >
+              <Hand size={11} />
+              <span>抓手</span>
+            </button>
+            <button
+              onClick={() => setToolMode('resize')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                toolMode === 'resize'
+                  ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="缩放模式：拖拽便签四角/边线自由调整宽高"
+            >
+              <Maximize2 size={11} />
+              <span>缩放</span>
+            </button>
           </div>
           <span className="text-xs bg-slate-800/60 text-slate-300 px-3 py-1 rounded-full border border-slate-700/60">
             卡片状态：<strong className="text-blue-400 font-mono">{usedCount}</strong> 已用 / <span className="font-mono">{snippets.length}</span> 共计
@@ -167,9 +200,14 @@ export default function CanvasPanel() {
 
         <ReactFlow
           nodes={flowNodes}
-          // The canvas supports independent panning, dragging and selections
           onNodeDragStop={handleNodeDragStop}
           nodeTypes={nodeTypes}
+          nodesDraggable={toolMode === 'pan'}
+          nodesConnectable={false}
+          nodesFocusable={toolMode === 'pan'}
+          panOnDrag={toolMode === 'pan' ? true : [1]}
+          panOnScroll={true}
+          selectNodesOnDrag={false}
           fitView
           minZoom={0.2}
           maxZoom={1.5}
@@ -183,7 +221,11 @@ export default function CanvasPanel() {
 
       {/* Floating extension link/tips footer */}
       <div className="h-8 border-t border-slate-800 bg-slate-900 px-4 flex items-center justify-between text-[11px] text-slate-400 font-sans tracking-wide shrink-0">
-        <span>🖱️ 辅助操纵：长按鼠标右键 / 双指在触控板划过可平移画布 · 滚轮即可缩放</span>
+        <span>
+          {toolMode === 'pan'
+            ? '🖱️ 抓手模式：拖拽便签移动 · 滚轮缩放画布'
+            : '📐 缩放模式：拖拽便签四角/边线调整宽高 · 滚轮缩放画布 · 中键拖拽平移'}
+        </span>
         <span>本地高速索引技术由 Dexie DB (IndexedDB) 提供原生护航</span>
       </div>
     </div>

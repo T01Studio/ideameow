@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy } from 'lucide-react';
 import { useStore } from '../store';
 import type { DBSnippet } from '../db';
@@ -8,6 +8,7 @@ interface SnippetNodeProps {
   id: string;
   data: {
     snippet: DBSnippet;
+    resizeMode?: boolean;
   };
 }
 
@@ -18,6 +19,60 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   const [showSendBtn, setShowSendBtn] = useState(false);
   const [copiedHint, setCopiedHint] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
+
+  // ── Custom resize: direct DOM mutation on ReactFlow node wrapper ──
+  const resizeRef = useRef<{
+    dir: string;
+    startW: number;
+    startH: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+
+  const handleResizeStart = useCallback(
+    (dir: string) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
+      if (!wrapper) return;
+      resizeRef.current = {
+        dir,
+        startW: wrapper.offsetWidth,
+        startH: wrapper.offsetHeight,
+        startX: e.clientX,
+        startY: e.clientY,
+      };
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!data.resizeMode) return;
+    const onMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { dir, startW, startH, startX, startY } = resizeRef.current;
+      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
+      if (!wrapper) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      let nw = startW;
+      let nh = startH;
+      if (dir.includes('r')) nw = Math.max(220, startW + dx);
+      if (dir.includes('l')) { nw = Math.max(220, startW - dx); }
+      if (dir.includes('b')) nh = Math.max(100, startH + dy);
+      if (dir.includes('t')) { nh = Math.max(100, startH - dy); }
+      wrapper.style.width = nw + 'px';
+      wrapper.style.height = nh + 'px';
+    };
+    const onUp = () => { resizeRef.current = null; };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, [data.resizeMode]);
 
   if (!snippet) {
     return (
@@ -163,21 +218,24 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
 
   return (
     <div
+      ref={nodeRef}
       id={`node-snippet-${snippet.id}`}
-      className="relative group w-[300px] h-auto bg-slate-900 border border-slate-800/80 rounded-xl shadow-xl pointer-events-auto overflow-visible hover:border-slate-700/80 hover:shadow-2xl"
+      className={`relative group bg-slate-900 border rounded-xl shadow-xl pointer-events-auto overflow-visible hover:border-slate-700/80 hover:shadow-2xl ${data.resizeMode ? 'border-amber-500/60 border-dashed' : 'border-slate-800/80'}`}
     >
-      <NodeResizer
-        minWidth={220}
-        minHeight={120}
-        handleStyle={{
-          width: 14,
-          height: 14,
-          borderRadius: 3,
-          backgroundColor: '#64748b',
-          border: '2px solid #cbd5e1',
-        }}
-        lineStyle={{ borderColor: 'transparent' }}
-      />
+      {data.resizeMode && (
+        <>
+          {/* Edge lines */}
+          <div className="absolute inset-x-0 top-0 h-1 cursor-n-resize z-50" onMouseDown={handleResizeStart('t')} />
+          <div className="absolute inset-x-0 bottom-0 h-1 cursor-s-resize z-50" onMouseDown={handleResizeStart('b')} />
+          <div className="absolute inset-y-0 left-0 w-1 cursor-w-resize z-50" onMouseDown={handleResizeStart('l')} />
+          <div className="absolute inset-y-0 right-0 w-1 cursor-e-resize z-50" onMouseDown={handleResizeStart('r')} />
+          {/* Corner handles */}
+          <div className="absolute -top-[6px] -left-[6px] w-[14px] h-[14px] bg-slate-500 border-2 border-slate-300 rounded-sm cursor-nw-resize z-50" onMouseDown={handleResizeStart('tl')} />
+          <div className="absolute -top-[6px] -right-[6px] w-[14px] h-[14px] bg-slate-500 border-2 border-slate-300 rounded-sm cursor-ne-resize z-50" onMouseDown={handleResizeStart('tr')} />
+          <div className="absolute -bottom-[6px] -left-[6px] w-[14px] h-[14px] bg-slate-500 border-2 border-slate-300 rounded-sm cursor-sw-resize z-50" onMouseDown={handleResizeStart('bl')} />
+          <div className="absolute -bottom-[6px] -right-[6px] w-[14px] h-[14px] bg-slate-500 border-2 border-slate-300 rounded-sm cursor-se-resize z-50" onMouseDown={handleResizeStart('br')} />
+        </>
+      )}
       <Handle type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
 
       {/* Top colored accent line */}
@@ -234,7 +292,7 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
       {/* Content Zone — NOT draggable, freely selectable & copyable */}
       <div
         ref={contentRef}
-        className="p-4 text-slate-200 hover:text-white transition-colors relative"
+        className="p-4 text-slate-200 hover:text-white transition-colors relative overflow-auto max-h-full"
       >
         <div
           className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text"
