@@ -3,6 +3,7 @@ import Dexie, { type Table } from 'dexie';
 export interface Snippet {
   id: string;          // UUID
   source: 'chatgpt' | 'kimi' | 'doubao' | 'deepseek' | 'gemini' | 'claude' | 'other'; // AI来源
+  title?: string;      // 自定义标题，为空时使用 source 默认名称
   content: string;     // 抓取的文本内容
   timestamp: number;   // 抓取时间
   status: 'unread' | 'used'; // 状态：未用过 / 已拖入编辑器

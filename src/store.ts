@@ -12,6 +12,8 @@ interface IdeaMeowState {
   markAsUsed: (id: string, content?: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
   deleteSnippet: (id: string) => Promise<void>;
+  updateSnippetTitle: (id: string, title: string) => Promise<void>;
+  updateSnippetContent: (id: string, content: string) => Promise<void>;
   setExtensionConnected: (connected: boolean) => void;
   loadDocument: () => Promise<string>;
   saveDocument: (content: string) => Promise<void>;
@@ -120,8 +122,36 @@ export const useStore = create<IdeaMeowState>((set, get) => ({
     }
   },
 
+  // Update custom title
+  updateSnippetTitle: async (id: string, title: string) => {
+    try {
+      await db.snippets.update(id, { title });
+      set((state) => ({
+        snippets: state.snippets.map((s) =>
+          s.id === id ? { ...s, title } : s
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to update snippet title:', error);
+    }
+  },
+
   setExtensionConnected: (connected: boolean) => {
     set({ isExtensionConnected: connected });
+  },
+
+  // Update snippet content inline
+  updateSnippetContent: async (id: string, content: string) => {
+    try {
+      await db.snippets.update(id, { content });
+      set((state) => ({
+        snippets: state.snippets.map((s) =>
+          s.id === id ? { ...s, content } : s
+        ),
+      }));
+    } catch (error) {
+      console.error('Failed to update snippet content:', error);
+    }
   },
 
   resetPendingInsert: () => {

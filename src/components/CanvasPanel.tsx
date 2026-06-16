@@ -5,7 +5,7 @@ import {
   Controls,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { PlusCircle, Layers, HelpCircle, Hand, Maximize2 } from 'lucide-react';
+import { PlusCircle, HelpCircle, Hand, Maximize2, AlignStartVertical } from 'lucide-react';
 import { useStore } from '../store';
 import SnippetNode from './SnippetNode';
 
@@ -54,21 +54,24 @@ export default function CanvasPanel() {
     [updateSnippetPosition]
   );
 
-  // Auto-arrange helper: tidy up scattered snippets into an elegant grid layout
-  const handleAutoLayout = useCallback(() => {
+  // Compact flow layout: snap to grid with minimal spacing
+  const handleCompactLayout = useCallback(() => {
     const startX = 80;
     const startY = 80;
-    const horizontalSpacing = 360;
-    const verticalSpacing = 280;
-    const maxCols = 3;
+    const gapX = 30;
+    const gapY = 30;
+    const maxCols = 2;
 
-    snippets.forEach((snippet, index) => {
+    // Sort snippets by timestamp (oldest first) for stable ordering
+    const sorted = [...snippets].sort((a, b) => a.timestamp - b.timestamp);
+
+    sorted.forEach((snippet, index) => {
       const col = index % maxCols;
       const row = Math.floor(index / maxCols);
       updateSnippetPosition(
         snippet.id,
-        startX + col * horizontalSpacing,
-        startY + row * verticalSpacing
+        startX + col * (300 + gapX),
+        startY + row * (180 + gapY)
       );
     });
   }, [snippets, updateSnippetPosition]);
@@ -158,12 +161,12 @@ export default function CanvasPanel() {
           </div>
 
           <button
-            onClick={handleAutoLayout}
+            onClick={handleCompactLayout}
             className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 px-3 rounded-full border border-slate-700 transition-all cursor-pointer shadow-sm shadow-slate-950/20 font-medium"
-            title="将所有散落在画布上的卡片整理为漂亮整齐的网格布局"
+            title="将所有便签按时间排序、紧凑对齐排列"
           >
-            <Layers size={13} />
-            <span>网格智能整理</span>
+            <AlignStartVertical size={13} />
+            <span>紧凑排列</span>
           </button>
 
           <button

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy } from 'lucide-react';
+import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy, Pencil } from 'lucide-react';
 import { useStore } from '../store';
 import type { DBSnippet } from '../db';
 
@@ -14,12 +14,18 @@ interface SnippetNodeProps {
 
 export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   const { snippet } = data;
-  const { deleteSnippet, markAsUsed, markAsUnread, requestInsertText } = useStore();
+  const { deleteSnippet, markAsUsed, markAsUnread, requestInsertText, updateSnippetTitle, updateSnippetContent } = useStore();
   const [selectedText, setSelectedText] = useState('');
   const [showSendBtn, setShowSendBtn] = useState(false);
   const [copiedHint, setCopiedHint] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [editingContent, setEditingContent] = useState(false);
+  const [contentDraft, setContentDraft] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Custom resize: direct DOM mutation on ReactFlow node wrapper ──
   const resizeRef = useRef<{
@@ -132,6 +138,60 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   };
 
   const config = sourceConfigs[snippet.source] || sourceConfigs.other;
+
+  // ── Editable title ──
+  const displayTitle = snippet.title || config.name;
+
+  const handleTitleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!data.resizeMode) {
+      setEditingTitle(true);
+      setTitleDraft(displayTitle);
+      setTimeout(() => titleInputRef.current?.focus(), 0);
+    }
+  }, [displayTitle, data.resizeMode]);
+
+  const handleTitleCommit = useCallback(() => {
+    setEditingTitle(false);
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== displayTitle) {
+      updateSnippetTitle(snippet.id, trimmed);
+    }
+  }, [titleDraft, displayTitle, snippet.id, updateSnippetTitle]);
+
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleTitleCommit();
+    if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(''); }
+  }, [handleTitleCommit]);
+
+  // ── Editable content ──
+  const handleContentDblClick = useCallback(() => {
+    if (!data.resizeMode && !isUsed) {
+      setEditingContent(true);
+      setContentDraft(snippet.content);
+      setTimeout(() => {
+        contentTextareaRef.current?.focus();
+        contentTextareaRef.current?.select();
+      }, 0);
+    }
+  }, [data.resizeMode, isUsed, snippet.content]);
+
+  const handleContentCommit = useCallback(() => {
+    setEditingContent(false);
+    const trimmed = contentDraft.trim();
+    if (trimmed !== snippet.content) {
+      updateSnippetContent(snippet.id, trimmed || '');
+    }
+  }, [contentDraft, snippet.content, snippet.id, updateSnippetContent]);
+
+  const handleContentKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { setEditingContent(false); setContentDraft(''); }
+  }, []);
+
+  const handleClearContent = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateSnippetContent(snippet.id, '');
+  }, [snippet.id, updateSnippetContent]);
 
   // Convert timestamp
   const formatTime = (ts: number) => {
@@ -252,9 +312,26 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
             <GripHorizontal size={12} />
           </span>
 
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
-            {config.name}
-          </span>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={handleTitleCommit}
+              onKeyDown={handleTitleKeyDown}
+              onMouseDown={(e) => e.stopPropagation()}
+              maxLength={60}
+              className="bg-slate-800 border border-slate-600 text-slate-100 text-[10px] font-bold rounded px-1.5 py-0.5 outline-none focus:border-blue-500 w-[120px]"
+            />
+          ) : (
+            <span
+              onClick={handleTitleClick}
+              className={`text-[10px] font-bold uppercase tracking-wider cursor-pointer hover:underline hover:text-white transition-colors ${config.color}`}
+              title="点击修改标题"
+            >
+              {displayTitle}
+            </span>
+          )}
           <span className="font-mono text-[9px] text-slate-500 font-medium">
             {formatTime(snippet.timestamp)}
           </span>
@@ -286,6 +363,15 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
           >
             <Trash2 size={12} />
           </button>
+          {!isUsed && snippet.content && (
+            <button
+              onClick={handleClearContent}
+              className="p-1 hover:bg-slate-800 text-slate-400 hover:text-amber-400 rounded-full transition-colors"
+              title="清空内容"
+            >
+              <Pencil size={12} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -294,12 +380,28 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
         ref={contentRef}
         className="p-4 text-slate-200 hover:text-white transition-colors relative overflow-auto max-h-full"
       >
-        <div
-          className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text"
-          style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-        >
-          {snippet.content}
-        </div>
+        {editingContent ? (
+          <textarea
+            ref={contentTextareaRef}
+            value={contentDraft}
+            onChange={(e) => setContentDraft(e.target.value)}
+            onBlur={handleContentCommit}
+            onKeyDown={handleContentKeyDown}
+            onMouseDown={(e) => e.stopPropagation()}
+            rows={6}
+            className="w-full bg-slate-800 border border-slate-600 text-slate-100 text-xs leading-relaxed rounded p-2 outline-none focus:border-blue-500 resize-none font-sans"
+            style={{ minHeight: '80px' }}
+          />
+        ) : (
+          <div
+            onDoubleClick={handleContentDblClick}
+            className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text cursor-text"
+            style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '24px' }}
+            title="双击编辑内容"
+          >
+            {snippet.content || <span className="text-slate-600 italic">双击编辑内容...</span>}
+          </div>
+        )}
 
         {/* Floating action bar when text is selected */}
         {showSendBtn && selectedText && (
