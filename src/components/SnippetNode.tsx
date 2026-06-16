@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, NodeResizer } from '@xyflow/react';
 import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy } from 'lucide-react';
 import { useStore } from '../store';
 import type { DBSnippet } from '../db';
@@ -164,8 +164,14 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   return (
     <div
       id={`node-snippet-${snippet.id}`}
-      className="relative group min-w-[280px] max-w-[340px] bg-slate-900 border border-slate-800/80 rounded-xl shadow-xl transition-all duration-300 pointer-events-auto overflow-visible hover:border-slate-700/80 hover:shadow-2xl"
+      className="relative group w-[300px] h-auto bg-slate-900 border border-slate-800/80 rounded-xl shadow-xl transition-all duration-300 pointer-events-auto overflow-visible hover:border-slate-700/80 hover:shadow-2xl"
     >
+      <NodeResizer
+        minWidth={220}
+        minHeight={120}
+        handleStyle={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#475569', border: '1px solid #94a3b8' }}
+        lineStyle={{ borderColor: '#475569' }}
+      />
       <Handle type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
 
       {/* Top colored accent line */}
@@ -224,12 +230,12 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
         ref={contentRef}
         className="p-4 text-slate-200 hover:text-white transition-colors relative"
       >
-        <p
-          className="text-xs text-slate-300 leading-relaxed font-sans block max-h-[140px] overflow-y-auto pr-1 select-text scrollbar-thin"
-          style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
+        <div
+          className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text"
+          style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
           {snippet.content}
-        </p>
+        </div>
 
         {/* Floating action bar when text is selected */}
         {showSendBtn && selectedText && (

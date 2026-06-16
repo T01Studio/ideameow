@@ -164,7 +164,9 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
     if (!editor || !pendingInsert) return;
     
     editor.chain().focus().run();
-    const blockquoteHTML = `<blockquote><p>${pendingInsert.content}</p></blockquote><p></p>`;
+    // Convert newlines to <br> so Tiptap renders proper paragraph breaks
+    const htmlContent = pendingInsert.content.replace(/\n/g, '<br>');
+    const blockquoteHTML = `<blockquote><p>${htmlContent}</p></blockquote><p></p>`;
     editor.commands.insertContent(blockquoteHTML);
     
     resetPendingInsert();
@@ -197,8 +199,9 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
         // Set focus to Editor
         editor.chain().focus().run();
 
-        // Wrap the dropped node neatly in quotes
-        const blockquoteHTML = `<blockquote><p>${data.content}</p></blockquote><p></p>`;
+        // Wrap the dropped node neatly in quotes, converting newlines to HTML breaks
+        const htmlContent = data.content.replace(/\n/g, '<br>');
+        const blockquoteHTML = `<blockquote><p>${htmlContent}</p></blockquote><p></p>`;
         
         // Insert node text at cursor position
         editor.commands.insertContent(blockquoteHTML);
