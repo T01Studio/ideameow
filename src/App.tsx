@@ -57,12 +57,10 @@ export default function App() {
       {/* Global Application Nav Header */}
       <header className="h-14 flex items-center justify-between px-6 bg-slate-900/90 border-b border-slate-800/80 shrink-0 select-none z-30 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          {/* Cat Paw Logo */}
-          <img
-            src="/logo.png"
-            alt="IdeaMeow"
-            className="w-8 h-8 rounded-lg object-cover shadow-lg shadow-blue-500/20"
-          />
+          {/* IM Logo */}
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <span className="text-white font-black text-[13px] tracking-tighter leading-none select-none">IM</span>
+          </div>
           <div>
             <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2 leading-none">
               IdeaMeow
