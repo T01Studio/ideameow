@@ -22,10 +22,12 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   const [titleDraft, setTitleDraft] = useState('');
   const [editingContent, setEditingContent] = useState(false);
   const [contentDraft, setContentDraft] = useState('');
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const savedWrapperSize = useRef<{ w: string; h: string } | null>(null);
 
   // ── Custom resize: direct DOM mutation on ReactFlow node wrapper ──
   const resizeRef = useRef<{
@@ -169,6 +171,15 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
     if (!data.resizeMode && !isUsed) {
       setEditingContent(true);
       setContentDraft(snippet.content);
+      // Save current node wrapper size and expand to comfortable editing size
+      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
+      if (wrapper) {
+        savedWrapperSize.current = { w: wrapper.style.width, h: wrapper.style.height };
+        const curW = wrapper.offsetWidth;
+        const curH = wrapper.offsetHeight;
+        if (curW < 300) wrapper.style.width = '300px';
+        if (curH < 180) wrapper.style.height = '180px';
+      }
       setTimeout(() => {
         contentTextareaRef.current?.focus();
         contentTextareaRef.current?.select();
@@ -178,6 +189,13 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
 
   const handleContentCommit = useCallback(() => {
     setEditingContent(false);
+    // Restore node wrapper size
+    const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
+    if (wrapper && savedWrapperSize.current) {
+      wrapper.style.width = savedWrapperSize.current.w;
+      wrapper.style.height = savedWrapperSize.current.h;
+      savedWrapperSize.current = null;
+    }
     const trimmed = contentDraft.trim();
     if (trimmed !== snippet.content) {
       updateSnippetContent(snippet.id, trimmed || '');
@@ -185,7 +203,17 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   }, [contentDraft, snippet.content, snippet.id, updateSnippetContent]);
 
   const handleContentKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') { setEditingContent(false); setContentDraft(''); }
+    if (e.key === 'Escape') {
+      setEditingContent(false);
+      setContentDraft('');
+      // Restore node wrapper size
+      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
+      if (wrapper && savedWrapperSize.current) {
+        wrapper.style.width = savedWrapperSize.current.w;
+        wrapper.style.height = savedWrapperSize.current.h;
+        savedWrapperSize.current = null;
+      }
+    }
   }, []);
 
   const handleClearContent = useCallback((e: React.MouseEvent) => {
@@ -202,7 +230,7 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   // ── Global document-level mouseup to detect text selection ──
   // React Flow captures mouse events on nodes, so we hook into document instead.
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
       // Small delay to let the selection object settle
       setTimeout(() => {
         const selection = window.getSelection();
@@ -218,10 +246,16 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
         ) {
           setSelectedText(text);
           setShowSendBtn(true);
+          // Position toolbar relative to the content area — near the selection end
+          const contentRect = contentRef.current.getBoundingClientRect();
+          setToolbarPos({
+            x: e.clientX - contentRect.left,
+            y: e.clientY - contentRect.top - 36, // above mouse cursor
+          });
         } else {
-          // Only hide if the click was NOT on the send button
           setShowSendBtn(false);
           setSelectedText('');
+          setToolbarPos(null);
         }
       }, 10);
     };
@@ -376,54 +410,57 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
       </div>
 
       {/* Content Zone — NOT draggable, freely selectable & copyable */}
-      <div
-        ref={contentRef}
-        className="p-4 text-slate-200 hover:text-white transition-colors relative overflow-auto max-h-full"
-      >
-        {editingContent ? (
-          <textarea
-            ref={contentTextareaRef}
-            value={contentDraft}
-            onChange={(e) => setContentDraft(e.target.value)}
-            onBlur={handleContentCommit}
-            onKeyDown={handleContentKeyDown}
-            onMouseDown={(e) => e.stopPropagation()}
-            rows={6}
-            className="w-full bg-slate-800 border border-slate-600 text-slate-100 text-xs leading-relaxed rounded p-2 outline-none focus:border-blue-500 resize-none font-sans"
-            style={{ minHeight: '80px' }}
-          />
-        ) : (
-          <div
-            onDoubleClick={handleContentDblClick}
-            className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text cursor-text"
-            style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '24px' }}
-            title="双击编辑内容"
-          >
-            {snippet.content || <span className="text-slate-600 italic">双击编辑内容...</span>}
-          </div>
-        )}
+      <div className="relative">
+        <div
+          ref={contentRef}
+          className="p-4 text-slate-200 hover:text-white transition-colors overflow-y-auto max-h-full"
+        >
+          {editingContent ? (
+            <textarea
+              ref={contentTextareaRef}
+              value={contentDraft}
+              onChange={(e) => setContentDraft(e.target.value)}
+              onBlur={handleContentCommit}
+              onKeyDown={handleContentKeyDown}
+              onMouseDown={(e) => e.stopPropagation()}
+              rows={6}
+              className="w-full bg-slate-800 border border-slate-600 text-slate-100 text-xs leading-relaxed rounded p-2 outline-none focus:border-blue-500 resize-none font-sans"
+              style={{ minHeight: '80px' }}
+            />
+          ) : (
+            <div
+              onDoubleClick={handleContentDblClick}
+              className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text cursor-text"
+              style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '24px' }}
+              title="双击编辑内容"
+            >
+              {snippet.content || <span className="text-slate-600 italic">双击编辑内容...</span>}
+            </div>
+          )}
+        </div>
 
-        {/* Floating action bar when text is selected */}
-        {showSendBtn && selectedText && (
+        {/* Floating action bar when text is selected — follows mouse, outside scroll container */}
+        {showSendBtn && selectedText && toolbarPos && (
           <div
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-50 animate-fade-in"
+            className="absolute z-50 animate-fade-in pointer-events-auto"
+            style={{ left: Math.max(4, Math.min(toolbarPos.x - 55, (contentRef.current?.offsetWidth || 300) - 195)), top: Math.max(-8, toolbarPos.y - 10) }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-600 rounded-full px-1 py-1 shadow-2xl">
+            <div className="flex items-center gap-1 bg-slate-800 border border-slate-500 rounded-lg px-1.5 py-1 shadow-2xl whitespace-nowrap">
               <button
                 onClick={handleSendSelection}
-                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold py-1 px-2.5 rounded-full transition-all whitespace-nowrap cursor-pointer"
+                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold py-1 px-2 rounded transition-all cursor-pointer"
                 title="将选中文本发送到剧本编辑器光标处"
               >
-                <Send size={9} />
-                <span>发送到编辑器</span>
+                <Send size={10} />
+                <span>发送</span>
               </button>
               <button
                 onClick={handleCopySelection}
-                className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] font-bold py-1 px-2.5 rounded-full transition-all whitespace-nowrap cursor-pointer"
+                className="flex items-center gap-1 bg-slate-600 hover:bg-slate-500 text-slate-200 text-[10px] font-bold py-1 px-2 rounded transition-all cursor-pointer"
                 title="复制选中文本到剪贴板"
               >
-                <Copy size={9} />
+                <Copy size={10} />
                 <span>{copiedHint ? '已复制!' : '复制'}</span>
               </button>
             </div>
@@ -431,18 +468,20 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
         )}
       </div>
 
-      {/* USED overlay mask */}
+      {/* USED overlay — compact top banner instead of full center mask */}
       {isUsed && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[1.5px] flex flex-col items-center justify-center animate-fade-in transition-all rounded-xl">
-          <div className="bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1 rounded-full flex items-center gap-1.5 text-[10px] font-semibold shadow-lg">
-            <CheckCircle2 size={12} className="text-emerald-400" />
-            <span>已成功并入剧本段落</span>
+        <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 border-t border-emerald-500/30 px-3 py-2 flex items-center justify-between animate-fade-in rounded-b-xl">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+            <CheckCircle2 size={11} />
+            <span>已并入剧本</span>
           </div>
           <button
             onClick={() => markAsUnread(snippet.id)}
-            className="mt-2 text-[10px] font-sans text-slate-500 hover:text-slate-300 underline cursor-pointer"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-semibold py-1 px-2.5 rounded-full border border-slate-700 hover:border-slate-500 transition-all cursor-pointer"
+            title="撤回至灵感池"
           >
-            撤回至灵感池
+            <RotateCcw size={10} />
+            <span>撤回</span>
           </button>
         </div>
       )}
