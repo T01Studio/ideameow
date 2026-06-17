@@ -24,10 +24,10 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
   const [contentDraft, setContentDraft] = useState('');
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const contentTextRef = useRef<HTMLDivElement>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const savedWrapperSize = useRef<{ w: string; h: string } | null>(null);
 
   // ── Custom resize: direct DOM mutation on ReactFlow node wrapper ──
   const resizeRef = useRef<{
@@ -171,31 +171,36 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
     if (!data.resizeMode && !isUsed) {
       setEditingContent(true);
       setContentDraft(snippet.content);
-      // Save current node wrapper size and expand to comfortable editing size
-      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
-      if (wrapper) {
-        savedWrapperSize.current = { w: wrapper.style.width, h: wrapper.style.height };
-        const curW = wrapper.offsetWidth;
-        const curH = wrapper.offsetHeight;
-        if (curW < 300) wrapper.style.width = '300px';
-        if (curH < 180) wrapper.style.height = '180px';
-      }
       setTimeout(() => {
         contentTextareaRef.current?.focus();
         contentTextareaRef.current?.select();
-      }, 0);
+      }, 50);
     }
+  }, [data.resizeMode, isUsed, snippet.content]);
+
+  // Native dblclick listener on node root as fallback for ReactFlow event interception
+  useEffect(() => {
+    const node = nodeRef.current;
+    if (!node) return;
+    const onDblClick = (e: MouseEvent) => {
+      if (data.resizeMode || isUsed) return;
+      // Check if the double-click is inside the content text area
+      const target = e.target as HTMLElement;
+      if (target && target.closest('[data-content-text="true"]')) {
+        setEditingContent(true);
+        setContentDraft(snippet.content);
+        setTimeout(() => {
+          contentTextareaRef.current?.focus();
+          contentTextareaRef.current?.select();
+        }, 50);
+      }
+    };
+    node.addEventListener('dblclick', onDblClick);
+    return () => node.removeEventListener('dblclick', onDblClick);
   }, [data.resizeMode, isUsed, snippet.content]);
 
   const handleContentCommit = useCallback(() => {
     setEditingContent(false);
-    // Restore node wrapper size
-    const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
-    if (wrapper && savedWrapperSize.current) {
-      wrapper.style.width = savedWrapperSize.current.w;
-      wrapper.style.height = savedWrapperSize.current.h;
-      savedWrapperSize.current = null;
-    }
     const trimmed = contentDraft.trim();
     if (trimmed !== snippet.content) {
       updateSnippetContent(snippet.id, trimmed || '');
@@ -206,13 +211,6 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
     if (e.key === 'Escape') {
       setEditingContent(false);
       setContentDraft('');
-      // Restore node wrapper size
-      const wrapper = nodeRef.current?.closest('.react-flow__node') as HTMLElement | null;
-      if (wrapper && savedWrapperSize.current) {
-        wrapper.style.width = savedWrapperSize.current.w;
-        wrapper.style.height = savedWrapperSize.current.h;
-        savedWrapperSize.current = null;
-      }
     }
   }, []);
 
@@ -411,9 +409,11 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
 
       {/* Content Zone — NOT draggable, freely selectable & copyable */}
       <div className="relative">
+        {/* Outer container with fixed min-height for editing stability */}
         <div
           ref={contentRef}
-          className="p-4 text-slate-200 hover:text-white transition-colors overflow-y-auto max-h-full"
+          className="p-4 text-slate-200 hover:text-white transition-colors overflow-y-auto"
+          style={{ minHeight: editingContent ? '140px' : 'auto' }}
         >
           {editingContent ? (
             <textarea
@@ -423,14 +423,15 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
               onBlur={handleContentCommit}
               onKeyDown={handleContentKeyDown}
               onMouseDown={(e) => e.stopPropagation()}
-              rows={6}
-              className="w-full bg-slate-800 border border-slate-600 text-slate-100 text-xs leading-relaxed rounded p-2 outline-none focus:border-blue-500 resize-none font-sans"
-              style={{ minHeight: '80px' }}
+              className="w-full bg-slate-800 border border-slate-600 text-slate-100 text-xs leading-relaxed rounded p-2 outline-none focus:border-blue-500 font-sans block"
+              style={{ minHeight: '160px', minWidth: '100%', resize: 'vertical' }}
             />
           ) : (
             <div
+              ref={contentTextRef}
+              data-content-text="true"
               onDoubleClick={handleContentDblClick}
-              className="text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text cursor-text"
+              className="nodrag nopan text-xs text-slate-300 leading-relaxed font-sans block p-2 select-text cursor-pointer"
               style={{ userSelect: 'text', WebkitUserSelect: 'text', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '24px' }}
               title="双击编辑内容"
             >
