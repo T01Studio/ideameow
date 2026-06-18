@@ -469,19 +469,19 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
         )}
       </div>
 
-      {/* USED overlay — compact top banner instead of full center mask */}
+      {/* USED overlay — full card mask to avoid visual clutter */}
       {isUsed && (
-        <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 border-t border-emerald-500/30 px-3 py-2 flex items-center justify-between animate-fade-in rounded-b-xl">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
-            <CheckCircle2 size={11} />
-            <span>已并入剧本</span>
+        <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-xl z-40">
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 text-slate-300 px-3 py-1.5 rounded-full">
+            <CheckCircle2 size={12} className="text-emerald-400" />
+            <span className="text-[10px] font-semibold text-emerald-400">已并入剧本</span>
           </div>
           <button
             onClick={() => markAsUnread(snippet.id)}
-            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-semibold py-1 px-2.5 rounded-full border border-slate-700 hover:border-slate-500 transition-all cursor-pointer"
+            className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-semibold py-1.5 px-3 rounded-full border border-slate-700 hover:border-slate-500 transition-all cursor-pointer shadow-lg"
             title="撤回至灵感池"
           >
-            <RotateCcw size={10} />
+            <RotateCcw size={11} />
             <span>撤回</span>
           </button>
         </div>
