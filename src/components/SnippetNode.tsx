@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy, Pencil } from 'lucide-react';
+import { Trash2, CheckCircle2, RotateCcw, AlertCircle, Send, GripHorizontal, Copy } from 'lucide-react';
 import { useStore } from '../store';
 import type { DBSnippet } from '../db';
 
@@ -214,11 +214,6 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
     }
   }, []);
 
-  const handleClearContent = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    updateSnippetContent(snippet.id, '');
-  }, [snippet.id, updateSnippetContent]);
-
   // Convert timestamp
   const formatTime = (ts: number) => {
     const d = new Date(ts);
@@ -395,15 +390,6 @@ export default function SnippetNode({ id: nodeId, data }: SnippetNodeProps) {
           >
             <Trash2 size={12} />
           </button>
-          {!isUsed && snippet.content && (
-            <button
-              onClick={handleClearContent}
-              className="p-1 hover:bg-slate-800 text-slate-400 hover:text-amber-400 rounded-full transition-colors"
-              title="清空内容"
-            >
-              <Pencil size={12} />
-            </button>
-          )}
         </div>
       </div>
 

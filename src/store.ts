@@ -12,6 +12,7 @@ interface IdeaMeowState {
   markAsUsed: (id: string, content?: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
   deleteSnippet: (id: string) => Promise<void>;
+  clearAllSnippets: () => Promise<void>;
   updateSnippetTitle: (id: string, title: string) => Promise<void>;
   updateSnippetContent: (id: string, content: string) => Promise<void>;
   setExtensionConnected: (connected: boolean) => void;
@@ -119,6 +120,16 @@ export const useStore = create<IdeaMeowState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to delete snippet:', error);
+    }
+  },
+
+  // Clear all snippets from canvas
+  clearAllSnippets: async () => {
+    try {
+      await db.snippets.clear();
+      set({ snippets: [] });
+    } catch (error) {
+      console.error('Failed to clear all snippets:', error);
     }
   },
 

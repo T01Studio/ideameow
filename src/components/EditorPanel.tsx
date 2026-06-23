@@ -433,11 +433,11 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <div className="max-w-2xl mx-auto h-full rounded-2xl bg-white border border-slate-100 shadow-sm p-8 min-h-[500px]">
+        <div className="max-w-2xl mx-auto rounded-2xl bg-white border border-slate-100 shadow-sm p-8 min-h-[500px]">
           {/* Tiptap input interface */}
           <EditorContent 
             editor={editor} 
-            className="h-full min-h-[400px] outline-none selection:bg-blue-600/10 selection:text-blue-950"
+            className="min-h-[400px] outline-none selection:bg-blue-600/10 selection:text-blue-950"
           />
         </div>
       </div>

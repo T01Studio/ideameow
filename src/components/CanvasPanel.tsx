@@ -5,7 +5,7 @@ import {
   Controls,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { PlusCircle, HelpCircle, Hand, Maximize2, AlignStartVertical } from 'lucide-react';
+import { PlusCircle, HelpCircle, Hand, Maximize2, AlignStartVertical, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
 import SnippetNode from './SnippetNode';
 
@@ -19,6 +19,7 @@ export default function CanvasPanel() {
     loadSnippets,
     addSnippet,
     updateSnippetPosition,
+    clearAllSnippets,
     isExtensionConnected,
   } = useStore();
 
@@ -71,6 +72,14 @@ export default function CanvasPanel() {
     });
   }, [snippets, updateSnippetPosition]);
 
+  // Clear all sticky notes from the canvas (with confirmation)
+  const handleClearAll = useCallback(() => {
+    if (snippets.length === 0) return;
+    if (window.confirm('确定要清空画布中的全部便签吗？此操作不可撤销。')) {
+      clearAllSnippets();
+    }
+  }, [snippets.length, clearAllSnippets]);
+
   // Formulates a manual card inside workspace
   const handleCreateManualSnippet = useCallback(() => {
     const randomIdea = prompt('Enter a custom text snippet or note:')?.trim();
@@ -101,7 +110,7 @@ export default function CanvasPanel() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-md shadow-blue-500/50 animate-pulse" />
             <h3 className="font-sans font-bold text-sm text-slate-100">
-              无线灵感素材画布
+              无限灵感画布
             </h3>
           </div>
           {/* Tool mode switcher */}
@@ -156,12 +165,22 @@ export default function CanvasPanel() {
           </div>
 
           <button
+            onClick={handleClearAll}
+            disabled={snippets.length === 0}
+            className="flex items-center gap-1 bg-slate-800 hover:bg-red-600/90 hover:text-white text-slate-200 text-xs py-1.5 px-3 rounded-full border border-slate-700 hover:border-red-500 transition-all cursor-pointer shadow-sm shadow-slate-950/20 font-medium disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-800 disabled:hover:text-slate-200 disabled:hover:border-slate-700"
+            title="清空画布中的全部便签"
+          >
+            <Trash2 size={13} />
+            <span>一键清空</span>
+          </button>
+
+          <button
             onClick={handleCompactLayout}
             className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-1.5 px-3 rounded-full border border-slate-700 transition-all cursor-pointer shadow-sm shadow-slate-950/20 font-medium"
-            title="将所有便签按时间排序、紧凑对齐排列"
+            title="将所有便签按时间排序、紧凑对齐重排"
           >
             <AlignStartVertical size={13} />
-            <span>紧凑排列</span>
+            <span>一键重排</span>
           </button>
 
           <button
