@@ -233,13 +233,12 @@ export default function CanvasPanel() {
       </div>
 
       {/* Footer */}
-      <div className="h-7 border-t border-slate-800/60 bg-slate-900/80 px-4 flex items-center justify-between text-[10px] text-slate-500 font-sans tracking-wide shrink-0">
+      <div className="h-7 border-t border-slate-800/60 bg-slate-900/80 px-4 flex items-center text-[10px] text-slate-500 font-sans tracking-wide shrink-0">
         <span>
           {toolMode === 'pan'
             ? '拖拽移动便签 · 滚轮缩放画布'
             : '拖拽边角调整大小 · 中键拖拽平移'}
         </span>
-        <span>本地保存 · 不上传正文</span>
       </div>
     </div>
   );

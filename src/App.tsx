@@ -69,9 +69,7 @@ export default function App() {
             IdeaMeow
             <span className="text-slate-500 font-normal text-[10px]">灵感喵</span>
           </h1>
-          <span className="hidden sm:inline text-[10px] text-slate-500 font-medium pl-2 border-l border-slate-700/50">
-            本地优先 · 不上传正文
-          </span>
+
         </div>
 
         <div className="flex items-center gap-2">

@@ -13,7 +13,6 @@ import {
   Undo2,
   Redo2,
   Download,
-  Lock,
   Image,
   PanelRightClose
 } from 'lucide-react';
@@ -91,7 +90,8 @@ function htmlToMarkdown(html: string): string {
 
 export default function EditorPanel({ onCollapse }: { onCollapse?: () => void }) {
   const { documentContent, loadDocument, saveDocument, markAsUsed, pendingInsert, resetPendingInsert } = useStore();
-  const [isSavedTagVisible, setIsSavedTagVisible] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleSaveDebounced = useCallback((content: string) => {
@@ -102,8 +102,6 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
     // Save to store & database with a 800ms debounce
     debounceTimeout.current = setTimeout(async () => {
       await saveDocument(content);
-      setIsSavedTagVisible(true);
-      setTimeout(() => setIsSavedTagVisible(false), 2000);
     }, 800);
   }, [saveDocument]);
 
@@ -175,6 +173,17 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
         clearTimeout(debounceTimeout.current);
       }
     };
+  }, []);
+
+  // Click outside to close export dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Drag over target handler (allowing drop)
@@ -271,24 +280,36 @@ export default function EditorPanel({ onCollapse }: { onCollapse?: () => void })
     <div className="w-full h-full flex flex-col bg-white border-r border-slate-200/80 shadow-xl z-20 overflow-hidden text-slate-700">
       {/* Editor Header Bar */}
       <div className="h-11 border-b border-slate-100 bg-slate-50/80 px-4 flex items-center justify-between shrink-0 select-none">
-        <div className="flex items-center gap-2.5">
-          <h2 className="font-sans font-bold text-sm text-slate-800 tracking-tight">
-            剧本草稿
-          </h2>
-          <span className={`text-[11px] font-sans font-medium transition-opacity duration-300 flex items-center gap-1 text-emerald-600 ${isSavedTagVisible ? 'opacity-100' : 'opacity-0'}`}>
-            <Lock size={11} className="stroke-[2.5]" />
-            <span>已本地保存</span>
-          </span>
-        </div>
+        <h2 className="font-sans font-bold text-sm text-slate-800 tracking-tight">
+          成稿区
+        </h2>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportMarkdown}
-            className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-1.5 px-3 rounded-full transition-all cursor-pointer"
-          >
-            <Download size={12} />
-            <span>导出</span>
-          </button>
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setExportOpen(!exportOpen)}
+              className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-1.5 px-3 rounded-full transition-all cursor-pointer"
+            >
+              <Download size={12} />
+              <span>导出</span>
+            </button>
+            {exportOpen && (
+              <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <button
+                  onClick={() => { handleExportMarkdown(); setExportOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Markdown (.md)
+                </button>
+                <button
+                  onClick={() => { handleExportWord(); setExportOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer border-t border-slate-100"
+                >
+                  Word (.doc)
+                </button>
+              </div>
+            )}
+          </div>
           {onCollapse && (
             <button
               onClick={onCollapse}
